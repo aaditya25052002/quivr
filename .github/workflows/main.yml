@@ -1,0 +1,36 @@
+name: Deploy to Azure
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  ACR_NAME: quivrcontainer
+  ACI_GROUP: quivr
+  CONTAINER_NAME: quivr
+  IMAGE_NAME: quivr:${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Login to ACR
+      uses: docker/login-action@v1
+      with:
+        registry: ${{ env.ACR_NAME }}.azurecr.io
+        username: ${{ secrets.AZURE_ACR_USERNAME }}
+        password: ${{ secrets.AZURE_ACR_PASSWORD }}
+
+    - name: Build & Push Docker image
+      run: |
+        docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} .
+        docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}
+
+    - name: Deploy to ACI
+      run: |
+        az container create --resource-group ${{ env.ACI_GROUP }} --name ${{ env.CONTAINER_NAME }} --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} --cpu 1 --memory 1.5gb --dns-name-label aci-demo-${{ github.run_id }}
