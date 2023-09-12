@@ -1,0 +1,64 @@
+name: Deploy Backend to Azure
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'backend/**'
+
+env:
+  AZURE_REGION: East US
+  ACR_NAME: quivr
+  AKS_CLUSTER: quivrks # If using AKS
+  IMAGE_NAME: backend:${{ github.sha }}
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Login to Azure
+      run: |
+        az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+
+    - name: Login to ACR
+      run: |
+        az acr login --name ${{ env.ACR_NAME }}
+
+    - name: Build & Push Docker image
+      run: |
+        docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} ./backend/
+        docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}
+
+  deploy:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Login to Azure
+      run: |
+        az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+
+    # If using AKS:
+    - name: Set AKS context
+      run: |
+        az aks get-credentials --name ${{ env.AKS_CLUSTER }} --resource-group <Your_Resource_Group>
+
+    # Here, you would update your AKS deployment with the new Docker image.
+    - name: Deploy to AKS
+      run: |
+        kubectl set image deployment/<your-deployment-name> <container-name>=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}
+        kubectl rollout restart deployment/<your-deployment-name>
+
+    # If using ACI:
+    - name: Deploy to ACI
+      run: |
+        az container create --name <Container_Name> --resource-group <Resource_Group_Name> --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} --cpu 1 --memory 1.5gb

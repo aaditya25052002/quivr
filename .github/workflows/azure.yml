@@ -1,0 +1,83 @@
+name: Deploy to Azure
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  AZURE_REGION: East US
+  ACR_NAME: quivr
+  AKS_CLUSTER: quivrks  # If using AKS
+  IMAGE_NAME: backend:${{ github.sha }}
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login to ACR
+      run: |
+        az acr login --name ${{ env.ACR_NAME }}
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Create Docker Cache Storage Backend
+      run: |
+        docker buildx create --use --driver=docker-container
+
+    - name: Build, tag, and push image to ACR and GitHub Container Registry
+      uses: docker/build-push-action@v4
+      with:
+        context: ./backend/
+        push: true
+        tags: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}, ghcr.io/stangirard/quivr:${{ github.ref_name }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    # If using AKS:
+    - name: Set AKS context
+      run: |
+        az aks get-credentials --name ${{ env.AKS_CLUSTER }} --resource-group <Your_Resource_Group>
+
+    # Here, you would update your AKS deployment with the new Docker image.
+    - name: Deploy to AKS
+      run: |
+        kubectl set image deployment/<your-deployment-name> <container-name>=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}
+        kubectl rollout restart deployment/<your-deployment-name>
+
+    # If using ACI:
+    - name: Deploy to ACI
+      run: |
+        az container create --name <Container_Name> --resource-group <Resource_Group_Name> --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} --cpu 1 --memory 1.5gb
