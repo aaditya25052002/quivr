@@ -7,7 +7,7 @@ on:
 
 env:
   AZURE_REGION: East US
-  ACR_NAME: quivr
+  ACR_NAME: quivrcontainer
   AKS_CLUSTER: quivrks  # If using AKS
   IMAGE_NAME: backend:${{ github.sha }}
 
