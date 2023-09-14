@@ -47,7 +47,7 @@ jobs:
       with:
         context: ./backend/
         push: true
-        tags: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}, ghcr.io/stangirard/quivr:${{ github.ref_name }}
+        tags: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}, ghcr.io/aaditya25052002/quivr:${{ github.ref_name }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
