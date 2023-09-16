@@ -33,4 +33,4 @@ jobs:
 
     - name: Deploy to ACI
       run: |
-        az container create --resource-group ${{ env.ACI_GROUP }} --name ${{ env.CONTAINER_NAME }} --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} --cpu 1 --memory 1.5gb --dns-name-label aci-demo-${{ github.run_id }}
+        az container create --resource-group ${{ env.ACI_GROUP }} --name ${{ env.CONTAINER_NAME }} --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} --cpu 1 --memory 1.5 --dns-name-label aci-demo-${{ github.run_id }}
