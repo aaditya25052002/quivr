@@ -68,5 +68,5 @@ jobs:
     # Deploy to ACI:
     - name: Deploy to ACI
       run: |
-       az container create --name quivr-container-instance --resource-group quivr --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} --cpu 1 --memory 1.5 --registry-username quivrcontainer --registry-password ${{ secrets.CONTAINER_PASSWORD}}
+       az container create --name quivr-container-instance --resource-group quivr --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} --cpu 1 --memory 1.5 --ip_address public --ports 80 --registry-username quivrcontainer --registry-password ${{ secrets.CONTAINER_PASSWORD}}
 
