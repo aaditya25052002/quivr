@@ -1,12 +1,9 @@
-name: Manual Deploy to Azure App Service
+name: Deploy to Azure App Service
 
 on:
-  workflow_dispatch:
-    inputs:
-      deploy:
-        description: 'Deploy to Azure App Service'
-        required: true
-        default: 'false'
+  push:
+    tags:
+      - 'v*'
 
 env:
   AZURE_REGION: East US
