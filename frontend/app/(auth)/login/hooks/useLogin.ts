@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useRouter } from 'next/router';
 
 import { useSupabase } from "@/lib/context/SupabaseProvider";
 import { useToast } from "@/lib/hooks";
@@ -18,9 +19,13 @@ export const useLogin = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { t } = useTranslation(["login"]);
 
+
+  const router = useRouter();
+  const slackId = router.query.teamId;
+
   const handleLogin = async () => {
     setIsPending(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, session } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
@@ -48,23 +53,38 @@ export const useLogin = () => {
         variant: "success",
         text: t("loginSuccess",{ ns: 'login' })
       });
+
+      if (slackId) {
+        const { error: insertError } = await supabase
+          .from('slack_tokens')
+          .insert([
+            { slackId: slackId, access_token: session.access_token },
+          ]);
+
+        if (insertError) {
+          console.error('Error storing slackId and access_token:', insertError);
+          // Handle the insert error appropriately
+        }
+      }
     }
+    
     setIsPending(false);
   };
 
   useEffect(() => {
     if (session?.user !== undefined) {
       void track("SIGNED_IN");
-
+  
       const previousPage = sessionStorage.getItem("previous-page");
       if (previousPage === null) {
-        redirect("/upload");
+        router.push("/upload");
       } else {
         sessionStorage.removeItem("previous-page");
-        redirect(previousPage);
+        router.push(previousPage);
       }
     }
-  }, [session?.user]);
+  }, [session?.user, router, track]);
+  
 
   return {
     handleLogin,
